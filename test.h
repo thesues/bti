@@ -1,6 +1,6 @@
 namespace bti
 {
-  class Acount
+  class Account
   {
   public:
     char * account;
@@ -11,7 +11,6 @@ namespace bti
     char * access_token_secret;
     char * hosturl;
     char * hostname;
-    int oauth;
     virtual bool update()=0;
     virtual bool friends()=0;
     virtual bool user()=0;
@@ -20,11 +19,35 @@ namespace bti
     virtual bool group()=0;
     virtual bool retweet()=0;
   };
-  
+
+  class OauthAcount:public Acount
+  {
+  public:
+    virtual bool update();
+    virtual bool friends();
+    virtual bool user();
+    virtual bool reples();
+    virtual bool publicline();
+    virtual bool group();
+    virtual bool retweet();
+  };
+
+  class BaseAcount:public Acount
+  {
+  public:
+    virtual bool update();
+    virtual bool friends();
+    virtual bool user();
+    virtual bool reples();
+    virtual bool publicline();
+    virtual bool group();
+    virtual bool retweet();
+  };
+
   class Session
   {
-  private:
-    struct Acount * acountList;
+  public:
+    vector<Account*> accountList;
     int dry_run;
     int replyto;
     char * retweet;
@@ -41,9 +64,6 @@ namespace bti
     int page;
     char *(*readline)(const char *);
     void * readline_handle;
-  public:
-    Session();
-    Session(const Session& lhs);
-    const Session& operater= (Session& lhs);
+    Session(){}
   };
 }
