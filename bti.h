@@ -70,6 +70,63 @@ struct session {
 	void *readline_handle;
 	char *(*readline)(const char *);
 };
+/* struct session { */
+/* 	char *password; */
+/* 	char *account; */
+/* 	char *consumer_key; */
+/* 	char *consumer_secret; */
+/* 	char *access_token_key; */
+/* 	char *access_token_secret; */
+/* 	char *tweet; */
+/* 	char *proxy; */
+/* 	char *time; */
+/* 	char *homedir; */
+/* 	char *logfile; */
+/* 	char *user; */
+/* 	char *group; */
+/* 	char *hosturl; */
+/* 	char *hostname; */
+/* 	char *configfile; */
+/* 	char *replyto; */
+/* 	char *retweet; */
+/* 	int bash; */
+/* 	int background; */
+/* 	int interactive; */
+/* 	int shrink_urls; */
+/* 	int dry_run; */
+/* 	int page; */
+/* 	int no_oauth; */
+/* 	int guest; */
+/* 	int verbose; */
+/* 	enum host host; */
+/* 	enum action action; */
+/* 	void *readline_handle; */
+/* 	char *(*readline)(const char *); */
+/* }; */
+struct session {
+	char *tweet;
+	char *proxy;
+	char *time;
+	char *homedir;
+	char *logfile;
+	char *user;
+	char *group;
+	char *configfile;
+	char *replyto;
+	char *retweet;
+	int bash;
+	int background;
+	int interactive;
+	int shrink_urls;
+	int dry_run;
+	int page;
+	int no_oauth;
+	int guest;
+	int verbose;
+	void *readline_handle;
+	char *(*readline)(const char *);
+        struct account * accounts;
+};
 
 struct bti_curl_buffer {
 	char *data;

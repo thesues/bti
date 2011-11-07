@@ -1,20 +1,17 @@
+#ifndef __ACCOUNT_H
+#define __ACCOUNT_H
+
+/*void * is account data*/
 struct ops_t {
-  void (*action_update);
-  void (*action_friends);
-  void (*action_user);
-  void (*action_replies);
-  void (*action_public);
-  void (*action_group);
-  void (*action_retweet);
+  void (*action_update)(void *,struct session *);
+  void (*action_friends)(void  *,struct session *);
+  void (*action_user)(void  *.struct session *);
+  void (*action_replies)(void *,struct session *);
+  void (*action_public)(void  *,struct session *);
+  void (*action_group)(void  *,struct session *);
+  void (*action_retweet)(void  *,struct session *);
+  void (*parse_statuses)(void  *,struct session *);
+  void (*log_session)(void  * ,struct session*);
 };
-struct account{
-  char * password;
-  char * account;
-  char * consumer_key;
-  char * consumer_secret;
-  char * access_token_key;
-  char * access_token_secret;
-  char * tweet;
-  char * hosturl;
-  struct ops_t ops;
-};
+
+#endif
