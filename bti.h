@@ -19,12 +19,7 @@
 
 #ifndef __BTI_H
 #define __BTI_H
-
-enum host {
-	HOST_TWITTER  = 0,
-	HOST_IDENTICA = 1,
-	HOST_CUSTOM   = 2
-};
+#include "account.h"
 
 enum action {
 	ACTION_UPDATE  = 0,
@@ -37,72 +32,7 @@ enum action {
 	ACTION_UNKNOWN = 64
 };
 
-struct session {
-	char *password;
-	char *account;
-	char *consumer_key;
-	char *consumer_secret;
-	char *access_token_key;
-	char *access_token_secret;
-	char *tweet;
-	char *proxy;
-	char *time;
-	char *homedir;
-	char *logfile;
-	char *user;
-	char *group;
-	char *hosturl;
-	char *hostname;
-	char *configfile;
-	char *replyto;
-	char *retweet;
-	int bash;
-	int background;
-	int interactive;
-	int shrink_urls;
-	int dry_run;
-	int page;
-	int no_oauth;
-	int guest;
-	int verbose;
-	enum host host;
-	enum action action;
-	void *readline_handle;
-	char *(*readline)(const char *);
-};
-/* struct session { */
-/* 	char *password; */
-/* 	char *account; */
-/* 	char *consumer_key; */
-/* 	char *consumer_secret; */
-/* 	char *access_token_key; */
-/* 	char *access_token_secret; */
-/* 	char *tweet; */
-/* 	char *proxy; */
-/* 	char *time; */
-/* 	char *homedir; */
-/* 	char *logfile; */
-/* 	char *user; */
-/* 	char *group; */
-/* 	char *hosturl; */
-/* 	char *hostname; */
-/* 	char *configfile; */
-/* 	char *replyto; */
-/* 	char *retweet; */
-/* 	int bash; */
-/* 	int background; */
-/* 	int interactive; */
-/* 	int shrink_urls; */
-/* 	int dry_run; */
-/* 	int page; */
-/* 	int no_oauth; */
-/* 	int guest; */
-/* 	int verbose; */
-/* 	enum host host; */
-/* 	enum action action; */
-/* 	void *readline_handle; */
-/* 	char *(*readline)(const char *); */
-/* }; */
+
 struct session {
 	char *tweet;
 	char *proxy;
@@ -124,24 +54,18 @@ struct session {
 	int guest;
 	int verbose;
 	void *readline_handle;
+        enum action action;
 	char *(*readline)(const char *);
-        struct account * accounts;
+        struct account * account;
 };
 
-struct bti_curl_buffer {
-	char *data;
-	struct session *session;
-	enum action action;
-	int length;
-};
 
-extern const char twitter_host[];
-extern const char identica_host[];
-extern const char twitter_name[];
-extern const char identica_name[];
+/* extern const char twitter_host[]; */
+/* extern const char identica_host[]; */
+/* extern const char twitter_name[]; */
+/* extern const char identica_name[]; */
 extern int debug;
 
-extern void bti_parse_configfile(struct session *session);
 
 #define dbg(format, arg...)						\
 	do {								\

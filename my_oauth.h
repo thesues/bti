@@ -1,6 +1,7 @@
-#ifndef _OAUTH_H
-#define _OAUTH_H
-struct oauth_data{
+#ifndef _MY_OAUTH_H
+#define _MY_OAUTH_H
+#include "bti.h"
+struct oauth_data {
   char * consumer_key;
   char * consumer_secret;
   char * access_token_key;
@@ -19,5 +20,9 @@ struct oauth_data{
   char * retweet_uri;
   char * group_uri;
 };
+
+int oauth_destory(struct account *);
+int oauth_public(struct account * ,struct session *);
+/*TODO: other methods is going*/
 
 #endif
