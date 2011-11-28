@@ -290,11 +290,8 @@ int main(int argc, char *argv[], char *envp[])
 	};
 	struct session *session;
 	pid_t child;
-	char *tweet;
-	static char password[80];
 	int retval = 0;
 	int option;
-	char *http_proxy;
 	char *home;
 	const char *config_file;
 	time_t t;
@@ -335,7 +332,6 @@ int main(int argc, char *argv[], char *envp[])
 	
 	struct account * account = parse_configfile(session);
 	if (account == NULL) {
-	  
 	  dbg("parse err,goto exit");
 	}
 
@@ -474,6 +470,12 @@ int main(int argc, char *argv[], char *envp[])
 	  break;
 	case ACTION_UPDATE:
 	  retval = UPDATE(account, session);
+	  break;
+	case ACTION_FRIENDS:
+	  retval = FRIENDS(account ,session);
+	  break;
+	default:
+	  retval = -1;
 	  break;
 	}
 

@@ -321,33 +321,58 @@ static int parse_osp_reply(const char *reply, char **token, char **secret)
 {
   int rc;
   int retval = 1;
+  int i=1;
   char **rv = NULL;
   rc = oauth_split_url_parameters(reply, &rv);
-  qsort(rv, rc, sizeof(char *), oauth_cmpstringp);
-  if (rc == 2 || rc == 4) {
-    if (!strncmp(rv[0], "oauth_token=", 11) &&
-	!strncmp(rv[1], "oauth_t/oken_secret=", 18)) {
-      if (token)
-	*token = strdup(&(rv[0][12]));
-      if (secret)
-	*secret = strdup(&(rv[1][19]));
-      
-      retval = 0;
+  char ** p =rv;
+  while(i<=rc)
+  {
+    if(!strncmp(*p, "oauth_token=",12))
+    {
+      if(token)
+	*token = strdup(&(*p)[12]);
     }
-  } else if (rc == 3) {
-    if (!strncmp(rv[1], "oauth_token=", 11) &&
-	!strncmp(rv[2], "oauth_token_secret=", 18)) {
-      if (token)
-	*token = strdup(&(rv[1][12]));
-      if (secret)
-	*secret = strdup(&(rv[2][19]));
-      
-      retval = 0;
+    
+    if(!strncmp(*p, "oauth_token_secret=",19))
+    {
+      if(secret)
+	*secret = strdup(&(*p)[19]);
     }
+    i++;
+    p++;
+  }
+
+  if(*secret&&*token)
+  {
+    dbg("token: %s\n", *token);
+    dbg("secret: %s\n", *secret);
+    retval=0;
   }
   
-  dbg("token: %s\n", *token);
-  dbg("secret: %s\n", *secret);
+  /* qsort(rv, rc, sizeof(char *), oauth_cmpstringp); */
+  /* if (rc == 2 || rc == 4) { */
+  /*   if (!strncmp(rv[0], "oauth_token=", 11) && */
+  /* 	!strncmp(rv[1], "oauth_token_secret=", 18)) { */
+  /*     if (token) */
+  /* 	*token = strdup(&(rv[0][12])); */
+  /*     if (secret) */
+  /* 	*secret = strdup(&(rv[1][19])); */
+      
+  /*     retval = 0; */
+  /*   } */
+  /* } else if (rc == 3) { */
+  /*   //FIXME:use loop to parse reply; */
+  /*   if (!strncmp(rv[0], "oauth_token=", 11) && */
+  /* 	!strncmp(rv[1], "oauth_token_secret=", 18)) { */
+  /*     if (token) */
+  /* 	*token = strdup(&(rv[0][12])); */
+  /*     if (secret) */
+  /* 	*secret = strdup(&(rv[1][19])); */
+      
+  /*     retval = 0; */
+  /*   } */
+  /* } */
+  
   
   if (rv)
     free(rv);
@@ -376,9 +401,11 @@ int oauth_access_token(struct account * ac ,struct session * session){
   if (request_url)
     free(post_params);
   if (!reply)
-    return 1;
+    return -1;
   if (parse_osp_reply(reply, &at_key,&at_secret))
-    return 1;
+    return -1;
+  dbg("first round token:%s\n"
+      "            secret:%s\n", at_key, at_secret);
   free(reply);
   fprintf(stdout,
 	  "Please open the following link in your browser, and "
@@ -396,9 +423,7 @@ int oauth_access_token(struct account * ac ,struct session * session){
 				at_key,
 				at_secret);
   //FIXME:check at_key and at_secret first;
-  
-  data->access_token_key = strdup(at_key);
-  data->access_token_secret = strdup(at_secret);
+  reply = oauth_http_get(request_url, post_params);
   
   if (request_url)
     free(request_url);
@@ -407,11 +432,16 @@ int oauth_access_token(struct account * ac ,struct session * session){
     free(post_params);
   
   if (!reply)
-    return 1;
+    return -1;
   
   if (parse_osp_reply(reply, &at_key, &at_secret))
-    return 1;
-  free(reply);
+  {
+    free(reply);
+    return -1;
+  }
+  
+  dbg("second round token:%s\n"
+      "            secret:%s\n", at_key, at_secret);
 
   fprintf(stderr,
 	  "Please put these two lines in your bti "
@@ -421,7 +451,9 @@ int oauth_access_token(struct account * ac ,struct session * session){
 	  "access_token_secret=%s\n",
 	  at_key, at_secret);
   
-  exit(0);
+  data->access_token_key = strdup(at_key);
+  data->access_token_secret = strdup(at_secret);
+  return 0;
 }
 
 
@@ -484,7 +516,7 @@ static void parse_statuses(struct session *session,
 }
 
 
-static void parse_timeline(char *document, struct session *session)
+void parse_timeline(char *document, struct session *session)
 {
 	xmlDocPtr doc;
 	xmlNodePtr current;
@@ -525,7 +557,7 @@ int oauth_public(struct account * account ,struct session * session)
   char endpoint[500];
   char * req_url = NULL;
   char * reply   = NULL;
-  sprintf(endpoint,"%s%s",data->host_url,data->public_uri);
+  sprintf(endpoint,"%s%s?source=%s", data->host_url, data->public_uri, data->consumer_key);
   
   if (!session->dry_run) {
     req_url = oauth_sign_url2(endpoint, NULL, OA_HMAC,
@@ -581,10 +613,10 @@ int oauth_update(struct account * account ,struct session * session)
   dbg("tweet = %s\n", session->tweet);
 	
   char * escaped_tweet = oauth_url_escape(session->tweet);
-  sprintf(endpoint, "%s%s?status=%s", data->host_url, data->update_uri, escaped_tweet);
+  sprintf(endpoint, "%s%s?source=%s&status=%s", data->host_url, data->update_uri, data->consumer_key, escaped_tweet);
   if (!session->dry_run) {
-    req_url = oauth_sign_url2(endpoint, &postarg, OA_HMAC,
-			      NULL, data->consumer_key,
+    req_url = oauth_sign_url2(endpoint, &postarg, OA_HMAC, NULL,
+			      data->consumer_key,
 			      data->consumer_secret,
 			      data->access_token_key,
 			      data->access_token_secret);
@@ -594,9 +626,38 @@ int oauth_update(struct account * account ,struct session * session)
     dbg("%s\n", reply);
     if(req_url)
       free(req_url);
-    /*    if(escaped_tweet)
-	  free(escaped_tweet);
-    */
+    if(escaped_tweet)
+      free(escaped_tweet);
+  }
+
+  if(!reply){
+    dbg("Error retrieving from URL(%s)\n",endpoint);
+    return -1;
+  }
+  //FIXME:sina return xml is different
+  parse_timeline(reply, session);
+  return 0;
+}
+
+int oauth_friends(struct account * account, struct session * session)
+{
+    struct oauth_data *data=(struct oauth_data *)account->data;
+  char endpoint[500];
+  char * req_url = NULL;
+  char * reply   = NULL;
+  sprintf(endpoint,"%s%s?source=%s", data->host_url, data->friends_uri, data->consumer_key);
+  
+  if (!session->dry_run) {
+    req_url = oauth_sign_url2(endpoint, NULL, OA_HMAC,
+			      NULL, data->consumer_key,
+			      data->consumer_secret,
+			      data->access_token_key,
+			      data->access_token_secret);
+    reply = oauth_http_get(req_url, NULL);
+    dbg("%s\n", req_url);
+    dbg("%s\n", reply);
+    if(req_url)
+      free(req_url);
   }
 
   if(!reply){
@@ -606,7 +667,6 @@ int oauth_update(struct account * account ,struct session * session)
   parse_timeline(reply, session);
   return 0;
 }
-
 
 int oauth_destory(struct account * account)
 {
@@ -626,5 +686,6 @@ int oauth_destory(struct account * account)
   free(data->mentions_uri);
   free(data->replies_uri);
   free(data->retweet_uri);
+  return 0;
 }
 

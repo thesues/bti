@@ -70,7 +70,7 @@ extern int debug;
 #define dbg(format, arg...)						\
 	do {								\
 		if (debug)						\
-			fprintf(stdout, "bti: %s: " format , __func__ , \
+			fprintf(stderr, "bti: %s: " format , __func__ , \
 				## arg);				\
 	} while (0)
 

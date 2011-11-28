@@ -27,7 +27,7 @@ struct account *parse_configfile(struct session *session)
 	int bool;
 	if ((ini = iniparser_load(session->configfile)) == NULL) {
 		fprintf(stderr, "cannot parse file\n");
-		return;
+		return NULL;
 	}
 	struct account *account = NULL;
 
@@ -60,29 +60,63 @@ struct account *parse_configfile(struct session *session)
 	}
 
 	/* for twitter account */
-	s1 = iniparser_getstring(ini, "twitter:consumer_key", NULL);
-	s2 = iniparser_getstring(ini, "twitter:consumer_secret", NULL);
+	
+	/* s1 = iniparser_getstring(ini, "twitter:consumer_key", NULL); */
+	/* s2 = iniparser_getstring(ini, "twitter:consumer_secret", NULL); */
+	/* if (s1 != NULL && s2 != NULL) { */
+	/* 	account = twitter_init(s1, s2); */
+	/* 	struct oauth_data * data = (struct oauth_data *)account->data; */
+	/* 	/\*check for token key *\/ */
+	/* 	s1 = iniparser_getstring(ini, "twitter:access_token_key", NULL); */
+	/* 	s2 = iniparser_getstring(ini, "twitter:access_token_secret", NULL); */
+	/* 	if (s1 && s2) { */
+	/* 		dbg("yes!,we have access_token_key"); */
+	/* 		//add final token and token_secret to data */
+	/* 		data->access_token_key = strdup(s1); */
+	/* 		data->access_token_secret = strdup(s2); */
+	/* 	} else { */
+	/* 		dbg("no access_token_key now!"); */
+	/* 		char * token; */
+	/* 		char * secret; */
+	/* 		oauth_access_token(account, session); */
+	/* 		dbg("token:%s,\n secret:%s\n",data->access_token_key, data->access_token_secret); */
+			
+	/* 	} */
+	/* } */
 
+	//sina account;
+	s1 = iniparser_getstring(ini, "sina:consumer_key", NULL);
+	s2 = iniparser_getstring(ini, "sina:consumer_secret", NULL);
 	if (s1 != NULL && s2 != NULL) {
-		account = twitter_init(s1, s2);
+		account = sina_init(s1, s2);
+		struct oauth_data * data = (struct oauth_data *)account->data;
 		/*check for token key */
-		s1 = iniparser_getstring(ini, "twitter:access_token_key", NULL);
-		s2 = iniparser_getstring(ini, "twitter:access_token_secret",
-					 NULL);
-
+		s1 = iniparser_getstring(ini, "sina:access_token_key", NULL);
+		s2 = iniparser_getstring(ini, "sina:access_token_secret", NULL);
 		if (s1 && s2) {
 			dbg("yes!,we have access_token_key");
-			/* (struct oauth_data *)(account->data)->access_token_key  = strdup(s1); */
-			/* (struct oauth_data *)(account->data)->access_token_secret  = strdup(s2); */
-			twitter_add_token(s1,s2);
+			//add final token and token_secret to data
+			data->access_token_key = strdup(s1);
+			data->access_token_secret = strdup(s2);
 		} else {
 			dbg("no access_token_key now!");
-			oauth_access_token(account, session);
+			if(oauth_access_token(account, session)==1)
+			{
+				dbg("%s access token failed!", "twitter");
+			}
+			else
+			{
+				dbg("token:%s,\n secret:%s\n",data->access_token_key, data->access_token_secret);
+				iniparser_setstr(ini, "sina:access_token_key", data->access_token_key);
+				iniparser_setstr(ini, "sina:access_token_secret", data->access_token_secret);
+				FILE * fp=fopen(session->configfile,"w");
+				iniparser_dump_ini(ini, fp);
+				fclose(fp);
+			}
+			
 		}
 	}
 
-	s1 = iniparser_getstring(ini, "sina:consumer_key", NULL);
-	s2 = iniparser_getstring(ini, "sina:consumer_secret", NULL);
 
 	iniparser_freedict(ini);
 
