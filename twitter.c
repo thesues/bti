@@ -11,6 +11,12 @@ static struct ops_t twitter_ops = {
 	.destory = oauth_destory
 };
 
+void twitter_add_token(struct acccount * tw,const char * token_key, const char * token_secret)
+{
+	struct oauth_data * data = (struct oauth_data *)tw->data;
+	data->access_token_key = strdup(token_key);
+	data->access_token_secret = strdup(token_secret);
+}
 /*if twitter has not authorized,promote users to authorize it*/
 struct account * twitter_init(const char * consumer_key,const char *consumer_secret){
   struct account * tw = malloc(sizeof(struct account));

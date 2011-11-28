@@ -72,8 +72,9 @@ struct account *parse_configfile(struct session *session)
 
 		if (s1 && s2) {
 			dbg("yes!,we have access_token_key");
-			(struct oauth_data *)(account->data)->access_token_key  = strdup(s1);
-			(struct oauth_data *)(account->data)->access_token_secret  = strdup(s2);
+			/* (struct oauth_data *)(account->data)->access_token_key  = strdup(s1); */
+			/* (struct oauth_data *)(account->data)->access_token_secret  = strdup(s2); */
+			twitter_add_token(s1,s2);
 		} else {
 			dbg("no access_token_key now!");
 			oauth_access_token(account, session);
