@@ -21,7 +21,7 @@ struct ops_t {
 	int (*destory)(struct account *);
 };
 
-#define UPDATES(account, session)							\
+#define UPDATE(account, session)							\
 	account->opts->action_update(account,session);
 
 #define FRIENDS(account, session) \

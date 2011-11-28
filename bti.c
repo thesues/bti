@@ -44,7 +44,7 @@
 #include "account.h"
 #include "twitter.h"
 
-#define zalloc(size)	calloc(size, 1)
+
 
 #define VERSION "test"
 
@@ -265,323 +265,16 @@ static const char config_user_default[]	= ".bti";
 /* 	fclose(log_file); */
 /* } */
 
-static char *get_string_from_stdin(void)
-{
-	char *temp;
-	char *string;
 
-	string = zalloc(1000);
-	if (!string)
-		return NULL;
-
-	if (!fgets(string, 999, stdin))
-		return NULL;
-	temp = strchr(string, '\n');
-	if (temp)
-		*temp = '\0';
-	return string;
-}
-
-static void read_password(char *buf, size_t len, char *host)
-{
-	char pwd[80];
-	int retval;
-	struct termios old;
-	struct termios tp;
-
-	tcgetattr(0, &tp);
-	old = tp;
-
-	tp.c_lflag &= (~ECHO);
-	tcsetattr(0, TCSANOW, &tp);
-
-	fprintf(stdout, "Enter password for %s: ", host);
-	fflush(stdout);
-	tcflow(0, TCOOFF);
-	retval = scanf("%79s", pwd);
-	tcflow(0, TCOON);
-	fprintf(stdout, "\n");
-
-	tcsetattr(0, TCSANOW, &old);
-
-	strncpy(buf, pwd, len);
-	buf[len-1] = '\0';
-}
-
-static int find_urls(const char *tweet, int **pranges)
-{
-	/*
-	 * magic obtained from
-	 * http://www.geekpedia.com/KB65_How-to-validate-an-URL-using-RegEx-in-Csharp.html
-	 */
-	static const char *re_magic =
-		"(([a-zA-Z][0-9a-zA-Z+\\-\\.]*:)/{1,3}"
-		"[0-9a-zA-Z;/~?:@&=+$\\.\\-_'()%]+)"
-		"(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*'()%]+)?";
-	pcre *re;
-	const char *errptr;
-	int erroffset;
-	int ovector[10] = {0,};
-	const size_t ovsize = sizeof(ovector)/sizeof(*ovector);
-	int startoffset, tweetlen;
-	int i, rc;
-	int rbound = 10;
-	int rcount = 0;
-	int *ranges = malloc(sizeof(int) * rbound);
-
-	re = pcre_compile(re_magic,
-			PCRE_NO_AUTO_CAPTURE,
-			&errptr, &erroffset, NULL);
-	if (!re) {
-		fprintf(stderr, "pcre_compile @%u: %s\n", erroffset, errptr);
-		exit(1);
-	}
-
-	tweetlen = strlen(tweet);
-	for (startoffset = 0; startoffset < tweetlen; ) {
-
-		rc = pcre_exec(re, NULL, tweet, strlen(tweet), startoffset, 0,
-				ovector, ovsize);
-		if (rc == PCRE_ERROR_NOMATCH)
-			break;
-
-		if (rc < 0) {
-			fprintf(stderr, "pcre_exec @%u: %s\n",
-				erroffset, errptr);
-			exit(1);
-		}
-
-		for (i = 0; i < rc; i += 2) {
-			if ((rcount+2) == rbound) {
-				rbound *= 2;
-				ranges = realloc(ranges, sizeof(int) * rbound);
-			}
-
-			ranges[rcount++] = ovector[i];
-			ranges[rcount++] = ovector[i+1];
-		}
-
-		startoffset = ovector[1];
-	}
-
-	pcre_free(re);
-
-	*pranges = ranges;
-	return rcount;
-}
-
-/**
- * bidirectional popen() call
- *
- * @param rwepipe - int array of size three
- * @param exe - program to run
- * @param argv - argument list
- * @return pid or -1 on error
- *
- * The caller passes in an array of three integers (rwepipe), on successful
- * execution it can then write to element 0 (stdin of exe), and read from
- * element 1 (stdout) and 2 (stderr).
- */
-static int popenRWE(int *rwepipe, const char *exe, const char *const argv[])
-{
-	int in[2];
-	int out[2];
-	int err[2];
-	int pid;
-	int rc;
-
-	rc = pipe(in);
-	if (rc < 0)
-		goto error_in;
-
-	rc = pipe(out);
-	if (rc < 0)
-		goto error_out;
-
-	rc = pipe(err);
-	if (rc < 0)
-		goto error_err;
-
-	pid = fork();
-	if (pid > 0) {
-		/* parent */
-		close(in[0]);
-		close(out[1]);
-		close(err[1]);
-		rwepipe[0] = in[1];
-		rwepipe[1] = out[0];
-		rwepipe[2] = err[0];
-		return pid;
-	} else if (pid == 0) {
-		/* child */
-		close(in[1]);
-		close(out[0]);
-		close(err[0]);
-		close(0);
-		rc = dup(in[0]);
-		close(1);
-		rc = dup(out[1]);
-		close(2);
-		rc = dup(err[1]);
-
-		execvp(exe, (char **)argv);
-		exit(1);
-	} else
-		goto error_fork;
-
-	return pid;
-
-error_fork:
-	close(err[0]);
-	close(err[1]);
-error_err:
-	close(out[0]);
-	close(out[1]);
-error_out:
-	close(in[0]);
-	close(in[1]);
-error_in:
-	return -1;
-}
-
-static int pcloseRWE(int pid, int *rwepipe)
-{
-	int rc, status;
-	close(rwepipe[0]);
-	close(rwepipe[1]);
-	close(rwepipe[2]);
-	rc = waitpid(pid, &status, 0);
-	return status;
-}
-
-static char *shrink_one_url(int *rwepipe, char *big)
-{
-	int biglen = strlen(big);
-	char *small;
-	int smalllen;
-	int rc;
-
-	rc = dprintf(rwepipe[0], "%s\n", big);
-	if (rc < 0)
-		return big;
-
-	smalllen = biglen + 128;
-	small = malloc(smalllen);
-	if (!small)
-		return big;
-
-	rc = read(rwepipe[1], small, smalllen);
-	if (rc < 0 || rc > biglen)
-		goto error_free_small;
-
-	if (strncmp(small, "http://", 7))
-		goto error_free_small;
-
-	smalllen = rc;
-	while (smalllen && isspace(small[smalllen-1]))
-			small[--smalllen] = 0;
-
-	free(big);
-	return small;
-
-error_free_small:
-	free(small);
-	return big;
-}
-
-static char *shrink_urls(char *text)
-{
-	int *ranges;
-	int rcount;
-	int i;
-	int inofs = 0;
-	int outofs = 0;
-	const char *const shrink_args[] = {
-		"bti-shrink-urls",
-		NULL
-	};
-	int shrink_pid;
-	int shrink_pipe[3];
-	int inlen = strlen(text);
-
-	dbg("before len=%u\n", inlen);
-
-	shrink_pid = popenRWE(shrink_pipe, shrink_args[0], shrink_args);
-	if (shrink_pid < 0)
-		return text;
-
-	rcount = find_urls(text, &ranges);
-	if (!rcount)
-		return text;
-
-	for (i = 0; i < rcount; i += 2) {
-		int url_start = ranges[i];
-		int url_end = ranges[i+1];
-		int long_url_len = url_end - url_start;
-		char *url = strndup(text + url_start, long_url_len);
-		int short_url_len;
-		int not_url_len = url_start - inofs;
-
-		dbg("long  url[%u]: %s\n", long_url_len, url);
-		url = shrink_one_url(shrink_pipe, url);
-		short_url_len = url ? strlen(url) : 0;
-		dbg("short url[%u]: %s\n", short_url_len, url);
-
-		if (!url || short_url_len >= long_url_len) {
-			/* The short url ended up being too long
-			 * or unavailable */
-			if (inofs) {
-				strncpy(text + outofs, text + inofs,
-						not_url_len + long_url_len);
-			}
-			inofs += not_url_len + long_url_len;
-			outofs += not_url_len + long_url_len;
-
-		} else {
-			/* copy the unmodified block */
-			strncpy(text + outofs, text + inofs, not_url_len);
-			inofs += not_url_len;
-			outofs += not_url_len;
-
-			/* copy the new url */
-			strncpy(text + outofs, url, short_url_len);
-			inofs += long_url_len;
-			outofs += short_url_len;
-		}
-
-		free(url);
-	}
-
-	/* copy the last block after the last match */
-	if (inofs) {
-		int tail = inlen - inofs;
-		if (tail) {
-			strncpy(text + outofs, text + inofs, tail);
-			outofs += tail;
-		}
-	}
-
-	free(ranges);
-
-	(void)pcloseRWE(shrink_pid, shrink_pipe);
-
-	text[outofs] = 0;
-	dbg("after len=%u\n", outofs);
-	return text;
-}
 
 int main(int argc, char *argv[], char *envp[])
 {
+  //FIXME:user could choose only a website no all website.which means --host is available.
+  
 	static const struct option options[] = {
 		{ "debug", 0, NULL, 'd' },
 		{ "verbose", 0, NULL, 'V' },
-		{ "account", 1, NULL, 'a' },
-		{ "password", 1, NULL, 'p' },
-		{ "host", 1, NULL, 'H' },
-		{ "proxy", 1, NULL, 'P' },
 		{ "action", 1, NULL, 'A' },
-		{ "user", 1, NULL, 'u' },
-		{ "group", 1, NULL, 'G' },
 		{ "logfile", 1, NULL, 'L' },
 		{ "shrink-urls", 0, NULL, 's' },
 		{ "help", 0, NULL, 'h' },
@@ -606,7 +299,7 @@ int main(int argc, char *argv[], char *envp[])
 	const char *config_file;
 	time_t t;
 	int page_nr;
-
+	
 	debug = 0;
 
 	session = session_alloc();
@@ -638,19 +331,13 @@ int main(int argc, char *argv[], char *envp[])
 	session->configfile = zalloc(strlen(session->homedir) + strlen(config_file) + 7);
 	sprintf(session->configfile, "%s/%s", session->homedir, config_file);
 
-	/* Set environment variables first, before reading command line options
-	 * or config file values. */
-	http_proxy = getenv("http_proxy");
-	if (http_proxy) {
-		if (session->proxy)
-			free(session->proxy);
-		session->proxy = strdup(http_proxy);
-		dbg("http_proxy = %s\n", session->proxy);
-	}
-
 	session_readline_init(session);
 	
 	struct account * account = parse_configfile(session);
+	if (account == NULL) {
+	  
+	  dbg("parse err,goto exit");
+	}
 
 	while (1) {
 		option = getopt_long_only(argc, argv,
@@ -673,16 +360,6 @@ int main(int argc, char *argv[], char *envp[])
 		case 'r':
 			session->replyto = strdup(optarg);
 			dbg("in_reply_to_status_id = %s\n", session->replyto);
-			break;
-		case 'w':
-			session->retweet = strdup(optarg);
-			dbg("Retweet ID = %s\n", session->retweet);
-			break;
-		case 'P':
-			if (session->proxy)
-				free(session->proxy);
-			session->proxy = strdup(optarg);
-			dbg("proxy = %s\n", session->proxy);
 			break;
 		case 'A':
 			if (strcasecmp(optarg, "update") == 0)
@@ -777,32 +454,6 @@ int main(int argc, char *argv[], char *envp[])
 	}
 
 
-	if (session->action == ACTION_UPDATE) {
-		if (session->background || !session->interactive)
-			tweet = get_string_from_stdin();
-		else
-			tweet = session->readline("tweet: ");
-		if (!tweet || strlen(tweet) == 0) {
-			dbg("no tweet?\n");
-			return -1;
-		}
-
-		if (session->shrink_urls)
-			tweet = shrink_urls(tweet);
-
-		session->tweet = zalloc(strlen(tweet) + 10);
-		if (session->bash)
-			sprintf(session->tweet, "%c %s",
-				getuid() ? '$' : '#', tweet);
-		else
-			sprintf(session->tweet, "%s", tweet);
-
-		free(tweet);
-		dbg("tweet = %s\n", session->tweet);
-	}
-
-	if (session->page == 0)
-		session->page = 1;
 	
 	dbg("config file = %s\n", session->configfile);
 	dbg("action = %d\n", session->action);
@@ -811,17 +462,25 @@ int main(int argc, char *argv[], char *envp[])
 	 * with it's life as we try to connect and handle everything
 	 */
 	if (session->background) {
-		child = fork();
-		if (child) {
-			dbg("child is %d\n", child);
-			exit(0);
-		}
+	  child = fork();
+	  if (child) {
+	    dbg("child is %d\n", child);
+	    exit(0);
+	  }
 	}
-	PUBLIC(account,session);
+	switch(session->action) {
+	case ACTION_PUBLIC:
+	  retval = PUBLIC(account, session);
+	  break;
+	case ACTION_UPDATE:
+	  retval = UPDATE(account, session);
+	  break;
+	}
+
 	//	retval = send_request(session);
 	
-	/* if (retval && !session->background) */
-	/* 	fprintf(stderr, "operation failed\n"); */
+	if (retval && !session->background)
+		fprintf(stderr, "operation failed\n");
 
 	/* log_session(session, retval); */
 exit:

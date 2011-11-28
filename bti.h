@@ -35,7 +35,6 @@ enum action {
 
 struct session {
 	char *tweet;
-	char *proxy;
 	char *time;
 	char *homedir;
 	char *logfile;
@@ -66,6 +65,7 @@ struct session {
 /* extern const char identica_name[]; */
 extern int debug;
 
+#define zalloc(size)	calloc(size, 1)
 
 #define dbg(format, arg...)						\
 	do {								\

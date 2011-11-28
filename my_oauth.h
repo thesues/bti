@@ -1,12 +1,20 @@
 #ifndef _MY_OAUTH_H
 #define _MY_OAUTH_H
 #include "bti.h"
+
+enum HOST{
+  TWITTER,
+  SINA,
+  DOUBAN,
+};
+
 struct oauth_data {
   char * consumer_key;
   char * consumer_secret;
   char * access_token_key;
   char * access_token_secret;
-  char * host;
+  enum HOST host;
+  char * host_url;
   char * request_token_uri;
   char * access_authrize_uri;
   char * access_token_uri;
@@ -23,6 +31,8 @@ struct oauth_data {
 
 int oauth_destory(struct account *);
 int oauth_public(struct account * ,struct session *);
+int oauth_update(struct account * ,struct session *);
+
 /*TODO: other methods is going*/
 
 #endif

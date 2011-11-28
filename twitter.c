@@ -7,6 +7,7 @@
 
 static struct ops_t twitter_ops = {
 	.action_public  = oauth_public,
+	.action_update  = oauth_update,
 	.destory = oauth_destory
 };
 
@@ -22,7 +23,8 @@ struct account * twitter_init(const char * consumer_key,const char *consumer_sec
   
   data->consumer_key        = strdup(consumer_key);
   data->consumer_secret     = strdup(consumer_secret);
-  data->host                = strdup("http://api.twitter.com/1/statuses");
+  data->host                = TWITTER;
+  data->host_url            = strdup("http://api.twitter.com/1/statuses");
   data->request_token_uri   = strdup("http://twitter.com/oauth/request_token");
   data->access_token_uri    = strdup("http://twitter.com/oauth/access_token");
   data->access_authrize_uri = strdup("http://twitter.com/oauth/authorize?oauth_token=");
