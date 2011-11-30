@@ -21,7 +21,7 @@ static struct ops_t sina_ops = {
 
 struct account *sina_init(const char *consumer_key, const char *consumer_secret)
 {
-	struct account *sina = malloc(sizeof(struct account));
+	struct account *sina = (struct account *)malloc(sizeof(struct account));
 	struct oauth_data *data = malloc(sizeof(struct oauth_data));
 	if (data == NULL)
 		dbg("cannot alloc memory for struct twitter\n");

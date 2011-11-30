@@ -33,6 +33,9 @@ struct host_map hosts[NUMOFHOSTS] = {
 	{DOUBAN, "douban"},
 };
 
+extern struct account * twitter_init(const char *, const char *);
+extern struct account * sina_init(const char*, const char *);
+	
 static struct account *readConfig(enum HOST m_host, dictionary * ini,
 				  struct session *session);
 
@@ -41,7 +44,7 @@ struct account *parse_configfile(struct session *session)
 
 	dictionary *ini;
 	int item;
-	char *s, *s1, *s2;
+	char *s;
 	int bool;
 	if ((ini = iniparser_load(session->configfile)) == NULL) {
 		fprintf(stderr, "cannot parse file\n");
@@ -148,7 +151,7 @@ struct account *readConfig(enum HOST m_host, dictionary * ini,
 			dbg("no access_token_key now!");
 			if (oauth_access_token(account, session) == 1) {
 				fprintf(stderr, "%s access token failed!",
-					hosts[m_host]);
+					hosts[m_host].name);
 				account->opts->destory(account);
 				return NULL;
 			} else {

@@ -15,32 +15,6 @@
 #include <termios.h>
 #include <pcre.h>
 
-static void read_password(char *buf, size_t len, char *host)
-{
-	char pwd[80];
-	int retval;
-	struct termios old;
-	struct termios tp;
-
-	tcgetattr(0, &tp);
-	old = tp;
-
-	tp.c_lflag &= (~ECHO);
-	tcsetattr(0, TCSANOW, &tp);
-
-	fprintf(stdout, "Enter password for %s: ", host);
-	fflush(stdout);
-	tcflow(0, TCOOFF);
-	retval = scanf("%79s", pwd);
-	tcflow(0, TCOON);
-	fprintf(stdout, "\n");
-
-	tcsetattr(0, TCSANOW, &old);
-
-	strncpy(buf, pwd, len);
-	buf[len - 1] = '\0';
-}
-
 static int parse_osp_reply(const char *reply, char **token, char **secret)
 {
 	int rc;
@@ -305,6 +279,8 @@ int oauth_public(struct account *account, struct session *session)
 		return -1;
 	}
 	parse_timeline(reply, session);
+	if(reply)
+		free(reply);
 	return 0;
 }
 
@@ -331,6 +307,9 @@ int oauth_update(struct account *account, struct session *session)
 			free(req_url);
 		if (escaped_tweet)
 			free(escaped_tweet);
+		if (postarg)
+			free(postarg);
+
 	}
 
 	if (!reply) {
@@ -341,6 +320,7 @@ int oauth_update(struct account *account, struct session *session)
 	// parse_timeline(reply, session);
 	if (reply)
 		free(reply);
+	
 	return 0;
 }
 

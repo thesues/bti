@@ -64,13 +64,15 @@ struct ops_t {
 		}												\
 	}while(0)
 
-#define DESTORY(acc) \
+#define DESTORY(acc)							\
 	do{											\
-		struct account *p = acc;				\
-		while(p!=NULL){							\
-			p->opts->destory(p);			\
-			p=p->next;							\
-		}										\
+		struct account *p = acc;					\
+		struct account *tmp;						\
+		while(p!=NULL){								\
+			tmp=p->next;							\
+			p->opts->destory(p);					\
+			p=tmp;									\
+		}											\
 	}while(0);
 
 #endif

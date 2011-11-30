@@ -30,6 +30,7 @@
 
 #define VERSION "test"
 
+struct account *parse_configfile(struct session *session);
 /**
  * bidirectional popen() call
  *
