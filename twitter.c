@@ -8,6 +8,7 @@
 static struct ops_t twitter_ops = {
 	.action_public  = oauth_public,
 	.action_update  = oauth_update,
+       	.action_friends = oauth_friends,
 	.destory = oauth_destory
 };
 

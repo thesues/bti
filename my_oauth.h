@@ -3,9 +3,10 @@
 #include "bti.h"
 
 enum HOST{
-  TWITTER,
+  TWITTER=0,
   SINA,
   DOUBAN,
+  NUMOFHOSTS,
 };
 
 struct oauth_data {

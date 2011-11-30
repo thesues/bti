@@ -7,6 +7,7 @@ struct session;
 struct account{
 	struct ops_t * opts;
 	void * data;
+	struct account * next;
 };
 
 
@@ -21,18 +22,41 @@ struct ops_t {
 	int (*destory)(struct account *);
 };
 
-#define UPDATE(account, session)							\
-	account->opts->action_update(account,session);
+#define UPDATE(acc, session ,ret)							\
+	do{														\
+	struct account * p = acc;								\
+	while(p!=NULL) {										\
+		ret = p->opts->action_update(p,session);					\
+		p=p->next;											\
+	}\
+	}while(0)
 
-#define FRIENDS(account, session) \
-	account->opts->action_friends(account,session);
+#define FRIENDS(acc, session , ret)				\
+    do{											\
+	struct account *p = acc;					\
+	while(p!=NULL){									\
+		ret = p->opts->action_friends(p,session);	\
+		p = p->next;							\
+	}											\
+	}while(0)
 
-#define PUBLIC(account, session) \
-	account->opts->action_public(account,session);
+#define PUBLIC(acc, session, ret)					\
+	do{												\
+	struct account *p = acc;						\
+	while(p!=NULL){									\
+		ret = account->opts->action_public(p,session);	\
+		p=p->next;										\
+	}													\
+	}while(0)
 
-#define DESTORY(account) \
-	account->opts->destory(account);
-
+#define DESTORY(acc) \
+	do{											\
+		struct account *p = acc;				\
+		while(p!=NULL){							\
+			p->opts->destory(p);			\
+			p=p->next;							\
+		}										\
+	}while(0);
 
 #endif
 

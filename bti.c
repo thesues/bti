@@ -49,6 +49,283 @@
 #define VERSION "test"
 
 
+/**
+ * bidirectional popen() call
+ *
+ * @param rwepipe - int array of size three
+ * @param exe - program to run
+ * @param argv - argument list
+ * @return pid or -1 on error
+ *
+ * The caller passes in an array of three integers (rwepipe), on successful
+ * execution it can then write to element 0 (stdin of exe), and read from
+ * element 1 (stdout) and 2 (stderr).
+ */
+static int popenRWE(int *rwepipe, const char *exe, const char *const argv[])
+{
+	int in[2];
+	int out[2];
+	int err[2];
+	int pid;
+	int rc;
+
+	rc = pipe(in);
+	if (rc < 0)
+		goto error_in;
+
+	rc = pipe(out);
+	if (rc < 0)
+		goto error_out;
+
+	rc = pipe(err);
+	if (rc < 0)
+		goto error_err;
+
+	pid = fork();
+	if (pid > 0) {
+		/* parent */
+		close(in[0]);
+		close(out[1]);
+		close(err[1]);
+		rwepipe[0] = in[1];
+		rwepipe[1] = out[0];
+		rwepipe[2] = err[0];
+		return pid;
+	} else if (pid == 0) {
+		/* child */
+		close(in[1]);
+		close(out[0]);
+		close(err[0]);
+		close(0);
+		rc = dup(in[0]);
+		close(1);
+		rc = dup(out[1]);
+		close(2);
+		rc = dup(err[1]);
+
+		execvp(exe, (char **)argv);
+		exit(1);
+	} else
+		goto error_fork;
+
+	return pid;
+
+error_fork:
+	close(err[0]);
+	close(err[1]);
+error_err:
+	close(out[0]);
+	close(out[1]);
+error_out:
+	close(in[0]);
+	close(in[1]);
+error_in:
+	return -1;
+}
+
+static int pcloseRWE(int pid, int *rwepipe)
+{
+	int rc, status;
+	close(rwepipe[0]);
+	close(rwepipe[1]);
+	close(rwepipe[2]);
+	rc = waitpid(pid, &status, 0);
+	return status;
+}
+
+static char *get_string_from_stdin(void)
+{
+	char *temp;
+	char *string;
+
+	string = zalloc(1000);
+	if (!string)
+		return NULL;
+
+	if (!fgets(string, 999, stdin))
+		return NULL;
+	temp = strchr(string, '\n');
+	if (temp)
+		*temp = '\0';
+	return string;
+}
+
+static char *shrink_one_url(int *rwepipe, char *big)
+{
+	int biglen = strlen(big);
+	char *small;
+	int smalllen;
+	int rc;
+
+	rc = dprintf(rwepipe[0], "%s\n", big);
+	if (rc < 0)
+		return big;
+
+	smalllen = biglen + 128;
+	small = malloc(smalllen);
+	if (!small)
+		return big;
+
+	rc = read(rwepipe[1], small, smalllen);
+	if (rc < 0 || rc > biglen)
+		goto error_free_small;
+
+	if (strncmp(small, "http://", 7))
+		goto error_free_small;
+
+	smalllen = rc;
+	while (smalllen && isspace(small[smalllen-1]))
+			small[--smalllen] = 0;
+
+	free(big);
+	return small;
+
+error_free_small:
+	free(small);
+	return big;
+}
+static int find_urls(const char *tweet, int **pranges)
+{
+	/*
+	 * magic obtained from
+	 * http://www.geekpedia.com/KB65_How-to-validate-an-URL-using-RegEx-in-Csharp.html
+	 */
+	static const char *re_magic =
+		"(([a-zA-Z][0-9a-zA-Z+\\-\\.]*:)/{1,3}"
+		"[0-9a-zA-Z;/~?:@&=+$\\.\\-_'()%]+)"
+		"(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*'()%]+)?";
+	pcre *re;
+	const char *errptr;
+	int erroffset;
+	int ovector[10] = {0,};
+	const size_t ovsize = sizeof(ovector)/sizeof(*ovector);
+	int startoffset, tweetlen;
+	int i, rc;
+	int rbound = 10;
+	int rcount = 0;
+	int *ranges = malloc(sizeof(int) * rbound);
+
+	re = pcre_compile(re_magic,
+			PCRE_NO_AUTO_CAPTURE,
+			&errptr, &erroffset, NULL);
+	if (!re) {
+		fprintf(stderr, "pcre_compile @%u: %s\n", erroffset, errptr);
+		exit(1);
+	}
+
+	tweetlen = strlen(tweet);
+	for (startoffset = 0; startoffset < tweetlen; ) {
+
+		rc = pcre_exec(re, NULL, tweet, strlen(tweet), startoffset, 0,
+				ovector, ovsize);
+		if (rc == PCRE_ERROR_NOMATCH)
+			break;
+
+		if (rc < 0) {
+			fprintf(stderr, "pcre_exec @%u: %s\n",
+				erroffset, errptr);
+			exit(1);
+		}
+
+		for (i = 0; i < rc; i += 2) {
+			if ((rcount+2) == rbound) {
+				rbound *= 2;
+				ranges = realloc(ranges, sizeof(int) * rbound);
+			}
+
+			ranges[rcount++] = ovector[i];
+			ranges[rcount++] = ovector[i+1];
+		}
+
+		startoffset = ovector[1];
+	}
+
+	pcre_free(re);
+
+	*pranges = ranges;
+	return rcount;
+}
+
+static char *shrink_urls(char *text)
+{
+	int *ranges;
+	int rcount;
+	int i;
+	int inofs = 0;
+	int outofs = 0;
+	const char *const shrink_args[] = {
+		"bti-shrink-urls",
+		NULL
+	};
+	int shrink_pid;
+	int shrink_pipe[3];
+	int inlen = strlen(text);
+
+	dbg("before len=%u\n", inlen);
+
+	shrink_pid = popenRWE(shrink_pipe, shrink_args[0], shrink_args);
+	if (shrink_pid < 0)
+		return text;
+
+	rcount = find_urls(text, &ranges);
+	if (!rcount)
+		return text;
+
+	for (i = 0; i < rcount; i += 2) {
+		int url_start = ranges[i];
+		int url_end = ranges[i+1];
+		int long_url_len = url_end - url_start;
+		char *url = strndup(text + url_start, long_url_len);
+		int short_url_len;
+		int not_url_len = url_start - inofs;
+
+		dbg("long  url[%u]: %s\n", long_url_len, url);
+		url = shrink_one_url(shrink_pipe, url);
+		short_url_len = url ? strlen(url) : 0;
+		dbg("short url[%u]: %s\n", short_url_len, url);
+
+		if (!url || short_url_len >= long_url_len) {
+			/* The short url ended up being too long
+			 * or unavailable */
+			if (inofs) {
+				strncpy(text + outofs, text + inofs,
+						not_url_len + long_url_len);
+			}
+			inofs += not_url_len + long_url_len;
+			outofs += not_url_len + long_url_len;
+
+		} else {
+			/* copy the unmodified block */
+			strncpy(text + outofs, text + inofs, not_url_len);
+			inofs += not_url_len;
+			outofs += not_url_len;
+
+			/* copy the new url */
+			strncpy(text + outofs, url, short_url_len);
+			inofs += long_url_len;
+			outofs += short_url_len;
+		}
+
+		free(url);
+	}
+
+	/* copy the last block after the last match */
+	if (inofs) {
+		int tail = inlen - inofs;
+		if (tail) {
+			strncpy(text + outofs, text + inofs, tail);
+			outofs += tail;
+		}
+	}
+
+	free(ranges);
+
+	(void)pcloseRWE(shrink_pid, shrink_pipe);
+
+	text[outofs] = 0;
+	dbg("after len=%u\n", outofs);
+	return text;
+}
 
 int debug;
 
@@ -296,6 +573,7 @@ int main(int argc, char *argv[], char *envp[])
 	const char *config_file;
 	time_t t;
 	int page_nr;
+	char * tweet;
 	
 	debug = 0;
 
@@ -332,7 +610,8 @@ int main(int argc, char *argv[], char *envp[])
 	
 	struct account * account = parse_configfile(session);
 	if (account == NULL) {
-	  dbg("parse err,goto exit");
+	  fprintf(stderr,"parse err, goto exit\n");
+	  exit(-1);
 	}
 
 	while (1) {
@@ -466,13 +745,34 @@ int main(int argc, char *argv[], char *envp[])
 	}
 	switch(session->action) {
 	case ACTION_PUBLIC:
-	  retval = PUBLIC(account, session);
+	  PUBLIC(account, session, retval);
 	  break;
 	case ACTION_UPDATE:
-	  retval = UPDATE(account, session);
-	  break;
+
+	  if (session->background || !session->interactive)
+	    tweet = get_string_from_stdin();
+	  else
+	      tweet = session->readline("tweet: ");
+	  if (!tweet || strlen(tweet) == 0) {
+	    dbg("no tweet?\n");
+	    return -1;
+	  }
+	    
+	  if (session->shrink_urls)
+	    tweet = shrink_urls(tweet);
+	  session->tweet = zalloc(strlen(tweet) + 10);
+	  if (session->bash)
+	    sprintf(session->tweet, "%c %s",
+		    getuid() ? '$' : '#', tweet);
+	  else
+	    sprintf(session->tweet, "%s", tweet);
+	    if(tweet)
+	      free(tweet);
+	    dbg("tweet = %s\n", session->tweet);
+	    UPDATE(account, session, retval);
+	    break;
 	case ACTION_FRIENDS:
-	  retval = FRIENDS(account ,session);
+	  FRIENDS(account ,session, retval);
 	  break;
 	default:
 	  retval = -1;
@@ -485,6 +785,7 @@ int main(int argc, char *argv[], char *envp[])
 		fprintf(stderr, "operation failed\n");
 
 	/* log_session(session, retval); */
+	DESTORY(account);
 exit:
 	session_readline_cleanup(session);
 	session_free(session);

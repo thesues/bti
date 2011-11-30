@@ -6,37 +6,38 @@
 #include <stdlib.h>
 #include <oauth.h>
 
-int sina_public(struct account * account ,struct session * session)
-{
-  struct oauth_data *data=(struct oauth_data *)account->data;
-  char endpoint[500];
-  char * req_url = NULL;
-  char * reply   = NULL;
-  sprintf(endpoint,"%s%s?source=%s", data->host_url, data->public_uri, data->consumer_key);
+/* int sina_public(struct account * account ,struct session * session) */
+/* { */
+/*   struct oauth_data *data=(struct oauth_data *)account->data; */
+/*   char endpoint[500]; */
+/*   char * req_url = NULL; */
+/*   char * reply   = NULL; */
+/*   sprintf(endpoint,"%s%s?source=%s", data->host_url, data->public_uri, data->consumer_key); */
   
-  if (!session->dry_run) {
-    req_url = oauth_sign_url2(endpoint, NULL, OA_HMAC,
-			      NULL, data->consumer_key,
-			      data->consumer_secret,
-			      data->access_token_key,
-			      data->access_token_secret);
-    reply = oauth_http_get(req_url, NULL);
-    dbg("%s\n", req_url);
-    dbg("%s\n", reply);
-    if(req_url)
-      free(req_url);
-  }
+/*   if (!session->dry_run) { */
+/*     req_url = oauth_sign_url2(endpoint, NULL, OA_HMAC, */
+/* 			      NULL, data->consumer_key, */
+/* 			      data->consumer_secret, */
+/* 			      data->access_token_key, */
+/* 			      data->access_token_secret); */
+/*     reply = oauth_http_get(req_url, NULL); */
+/*     dbg("%s\n", req_url); */
+/*     dbg("%s\n", reply); */
+/*     if(req_url) */
+/*       free(req_url); */
+/*   } */
 
-  if(!reply){
-    dbg("Error retrieving from URL(%s)\n",endpoint);
-    return -1;
-  }
-  parse_timeline(reply, session);
-  return 0;
-}
+/*   if(!reply){ */
+/*     dbg("Error retrieving from URL(%s)\n",endpoint); */
+/*     return -1; */
+/*   } */
+/*   parse_timeline(reply, session); */
+/*   return 0; */
+/* } */
+
 
 static struct ops_t sina_ops = {
-	.action_public  = sina_public,
+	.action_public  = oauth_public,
 	.action_update  = oauth_update,
 	.action_friends = oauth_friends,
 	.destory = oauth_destory
