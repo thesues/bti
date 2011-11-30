@@ -42,7 +42,7 @@
 #include <oauth.h>
 #include "bti.h"
 
-typedef int (*config_function_callback)(struct session *session, char *value);
+typedef int (*config_function_callback) (struct session * session, char *value);
 
 struct config_function {
 	const char *key;
@@ -59,7 +59,8 @@ struct config_function {
  * the GPLv2+.  I hate writing parsers, so it makes sense to borrow working
  * logic from those smarter than I...
  */
-static int get_key(struct session *session, char *line, char **key, char **value)
+static int get_key(struct session *session, char *line, char **key,
+		   char **value)
 {
 	char *linepos;
 	char *temp;
@@ -254,7 +255,7 @@ static int action_callback(struct session *session, char *value)
 	else if (strcasecmp(value, "group") == 0)
 		session->action = ACTION_GROUP;
 	else
-		session->action= ACTION_UNKNOWN;
+		session->action = ACTION_UNKNOWN;
 	return 0;
 }
 
@@ -277,26 +278,26 @@ static int shrink_urls_callback(struct session *session, char *value)
  * Make sure the table is NULL terminated, otherwise bad things will happen.
  */
 static struct config_function config_table[] = {
-	{ "account", account_callback },
-	{ "password", password_callback },
-	{ "proxy", proxy_callback },
-	{ "user", user_callback },
-	{ "twitter_consumer_key", consumer_key_callback },
-	{ "twitter_consumer_secret", consumer_secret_callback },
-	{ "twitter_access_token_key", access_token_key_callback },
-	{ "twitter_access_token_secret", access_token_secret_callback },
-	{ "sina_consumer_key", consumer_key_callback },
-	{ "sina_consumer_secret", consumer_secret_callback },
-	{ "sina_access_token_key", access_token_key_callback },
-	{ "sina_access_token_secret", access_token_secret_callback },
-	{ "logfile", logfile_callback },
-	{ "replyto", replyto_callback },
-	{ "retweet", retweet_callback },
-	{ "host", host_callback },
-	{ "action", action_callback },
-	{ "verbose", verbose_callback },
-	{ "shrink-urls", shrink_urls_callback },
-	{ NULL, NULL }
+	{"account", account_callback},
+	{"password", password_callback},
+	{"proxy", proxy_callback},
+	{"user", user_callback},
+	{"twitter_consumer_key", consumer_key_callback},
+	{"twitter_consumer_secret", consumer_secret_callback},
+	{"twitter_access_token_key", access_token_key_callback},
+	{"twitter_access_token_secret", access_token_secret_callback},
+	{"sina_consumer_key", consumer_key_callback},
+	{"sina_consumer_secret", consumer_secret_callback},
+	{"sina_access_token_key", access_token_key_callback},
+	{"sina_access_token_secret", access_token_secret_callback},
+	{"logfile", logfile_callback},
+	{"replyto", replyto_callback},
+	{"retweet", retweet_callback},
+	{"host", host_callback},
+	{"action", action_callback},
+	{"verbose", verbose_callback},
+	{"shrink-urls", shrink_urls_callback},
+	{NULL, NULL}
 };
 
 static void process_line(struct session *session, char *key, char *value)
@@ -315,7 +316,7 @@ static void process_line(struct session *session, char *key, char *value)
 		if (strncasecmp(item->key, key, strlen(item->key)) == 0) {
 			/*
 			 * printf("calling %p, for key = '%s' and value = * '%s'\n",
-			 * 	  item->callback, key, value);
+			 *        item->callback, key, value);
 			 */
 			result = item->callback(session, value);
 			if (!result)
@@ -368,7 +369,8 @@ void bti_parse_configfile(struct session *session)
 					 * false positive; '#' occured
 					 * within a string
 					 */
-					hashmarker = strchrnul(hashmarker+2, '#');
+					hashmarker =
+					    strchrnul(hashmarker + 2, '#');
 				}
 			}
 		}
@@ -389,4 +391,3 @@ void bti_parse_configfile(struct session *session)
 	free(line);
 	fclose(config_file);
 }
-

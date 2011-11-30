@@ -22,16 +22,15 @@
 #include "account.h"
 
 enum action {
-	ACTION_UPDATE  = 0,
+	ACTION_UPDATE = 0,
 	ACTION_FRIENDS = 1,
-	ACTION_USER    = 2,
+	ACTION_USER = 2,
 	ACTION_REPLIES = 4,
-	ACTION_PUBLIC  = 8,
-	ACTION_GROUP   = 16,
+	ACTION_PUBLIC = 8,
+	ACTION_GROUP = 16,
 	ACTION_RETWEET = 32,
 	ACTION_UNKNOWN = 64
 };
-
 
 struct session {
 	char *tweet;
@@ -53,11 +52,10 @@ struct session {
 	int guest;
 	int verbose;
 	void *readline_handle;
-        enum action action;
-	char *(*readline)(const char *);
-        struct account * account;
+	enum action action;
+	char *(*readline) (const char *);
+	struct account *account;
 };
-
 
 /* extern const char twitter_host[]; */
 /* extern const char identica_host[]; */
@@ -73,6 +71,5 @@ extern int debug;
 			fprintf(stderr, "bti: %s: " format , __func__ , \
 				## arg);				\
 	} while (0)
-
 
 #endif

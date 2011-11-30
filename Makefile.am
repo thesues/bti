@@ -5,21 +5,27 @@ bin_SCRIPTS = \
 	bti-shrink-urls
 
 bti_SOURCES = \
-	bti.h \
-	config.c \
-	bti.c
+	bti.c\
+	bti.h\
+       	account.h\
+       	parseini.c\
+       	my_oauth.c\
+       	my_oauth.h\
+       	sina.c\
+       	twitter.c
 
 bti_CFLAGS = \
 	$(LIBCURL_CFLAGS) \
 	$(XML_CFLAGS) \
 	$(LIBPCRE_CFLAGS) \
 	$(LIBOAUTH_CFLAGS)
+	$(INIPARSER_CFLAGS)
 
 bti_LDADD = \
 	$(LIBCURL_LIBS) \
 	$(XML_LIBS) \
 	$(LIBPCRE_LIBS) \
-	$(LIBOAUTH_LIBS)
+	$(INIPARSER_LIBS)
 
 dist_man_MANS = \
 	bti.1 \

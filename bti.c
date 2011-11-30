@@ -1,22 +1,7 @@
 /*
- * Copyright (C) 2008-2011 Greg Kroah-Hartman <greg@kroah.com>
- * Copyright (C) 2009 Bart Trojanowski <bart@jukie.net>
- * Copyright (C) 2009-2010 Amir Mohammad Saied <amirsaied@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation version 2 of the License.
- *
- * This program is distributed in the hope that it will be useful, but
- * WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ * forked from Greg Kroah-Hartman's bti project
+ * see https://github.com/thesues/bti
  */
-
 #define _GNU_SOURCE
 
 #include <stdio.h>
@@ -42,12 +27,8 @@
 #include <oauth.h>
 #include "bti.h"
 #include "account.h"
-#include "twitter.h"
-
-
 
 #define VERSION "test"
-
 
 /**
  * bidirectional popen() call
@@ -110,16 +91,16 @@ static int popenRWE(int *rwepipe, const char *exe, const char *const argv[])
 
 	return pid;
 
-error_fork:
+ error_fork:
 	close(err[0]);
 	close(err[1]);
-error_err:
+ error_err:
 	close(out[0]);
 	close(out[1]);
-error_out:
+ error_out:
 	close(in[0]);
 	close(in[1]);
-error_in:
+ error_in:
 	return -1;
 }
 
@@ -174,16 +155,17 @@ static char *shrink_one_url(int *rwepipe, char *big)
 		goto error_free_small;
 
 	smalllen = rc;
-	while (smalllen && isspace(small[smalllen-1]))
-			small[--smalllen] = 0;
+	while (smalllen && isspace(small[smalllen - 1]))
+		small[--smalllen] = 0;
 
 	free(big);
 	return small;
 
-error_free_small:
+ error_free_small:
 	free(small);
 	return big;
 }
+
 static int find_urls(const char *tweet, int **pranges)
 {
 	/*
@@ -191,14 +173,14 @@ static int find_urls(const char *tweet, int **pranges)
 	 * http://www.geekpedia.com/KB65_How-to-validate-an-URL-using-RegEx-in-Csharp.html
 	 */
 	static const char *re_magic =
-		"(([a-zA-Z][0-9a-zA-Z+\\-\\.]*:)/{1,3}"
-		"[0-9a-zA-Z;/~?:@&=+$\\.\\-_'()%]+)"
-		"(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*'()%]+)?";
+	    "(([a-zA-Z][0-9a-zA-Z+\\-\\.]*:)/{1,3}"
+	    "[0-9a-zA-Z;/~?:@&=+$\\.\\-_'()%]+)"
+	    "(#[0-9a-zA-Z;/?:@&=+$\\.\\-_!~*'()%]+)?";
 	pcre *re;
 	const char *errptr;
 	int erroffset;
-	int ovector[10] = {0,};
-	const size_t ovsize = sizeof(ovector)/sizeof(*ovector);
+	int ovector[10] = { 0, };
+	const size_t ovsize = sizeof(ovector) / sizeof(*ovector);
 	int startoffset, tweetlen;
 	int i, rc;
 	int rbound = 10;
@@ -206,18 +188,17 @@ static int find_urls(const char *tweet, int **pranges)
 	int *ranges = malloc(sizeof(int) * rbound);
 
 	re = pcre_compile(re_magic,
-			PCRE_NO_AUTO_CAPTURE,
-			&errptr, &erroffset, NULL);
+			  PCRE_NO_AUTO_CAPTURE, &errptr, &erroffset, NULL);
 	if (!re) {
 		fprintf(stderr, "pcre_compile @%u: %s\n", erroffset, errptr);
 		exit(1);
 	}
 
 	tweetlen = strlen(tweet);
-	for (startoffset = 0; startoffset < tweetlen; ) {
+	for (startoffset = 0; startoffset < tweetlen;) {
 
 		rc = pcre_exec(re, NULL, tweet, strlen(tweet), startoffset, 0,
-				ovector, ovsize);
+			       ovector, ovsize);
 		if (rc == PCRE_ERROR_NOMATCH)
 			break;
 
@@ -228,13 +209,13 @@ static int find_urls(const char *tweet, int **pranges)
 		}
 
 		for (i = 0; i < rc; i += 2) {
-			if ((rcount+2) == rbound) {
+			if ((rcount + 2) == rbound) {
 				rbound *= 2;
 				ranges = realloc(ranges, sizeof(int) * rbound);
 			}
 
 			ranges[rcount++] = ovector[i];
-			ranges[rcount++] = ovector[i+1];
+			ranges[rcount++] = ovector[i + 1];
 		}
 
 		startoffset = ovector[1];
@@ -273,7 +254,7 @@ static char *shrink_urls(char *text)
 
 	for (i = 0; i < rcount; i += 2) {
 		int url_start = ranges[i];
-		int url_end = ranges[i+1];
+		int url_end = ranges[i + 1];
 		int long_url_len = url_end - url_start;
 		char *url = strndup(text + url_start, long_url_len);
 		int short_url_len;
@@ -289,7 +270,7 @@ static char *shrink_urls(char *text)
 			 * or unavailable */
 			if (inofs) {
 				strncpy(text + outofs, text + inofs,
-						not_url_len + long_url_len);
+					not_url_len + long_url_len);
 			}
 			inofs += not_url_len + long_url_len;
 			outofs += not_url_len + long_url_len;
@@ -349,9 +330,7 @@ static void display_help(void)
 		"  --background\n"
 		"  --debug\n"
 		"  --verbose\n"
-		"  --dry-run\n"
-		"  --version\n"
-		"  --help\n", VERSION);
+		"  --dry-run\n" "  --version\n" "  --help\n", VERSION);
 }
 
 static void display_version(void)
@@ -395,12 +374,12 @@ static void session_readline_init(struct session *session)
 {
 	/* Libraries we will try to use for readline/editline functionality */
 	const char *libpath = "libreadline.so.6:libreadline.so.5:"
-				"libreadline.so.4:libreadline.so:libedit.so.2:"
-				"libedit.so:libeditline.so.0:libeditline.so";
+	    "libreadline.so.4:libreadline.so:libedit.so.2:"
+	    "libedit.so:libeditline.so.0:libeditline.so";
 	void *handle = NULL;
 	char *tmp, *cp, *next;
-	int (*bind_key)(int, void *);
-	void (*insert)(void);
+	int (*bind_key) (int, void *);
+	void (*insert) (void);
 
 	/* default to internal function if we can't or won't find anything */
 	session->readline = get_string;
@@ -408,7 +387,7 @@ static void session_readline_init(struct session *session)
 		return;
 	session->interactive = 1;
 
-	tmp = malloc(strlen(libpath)+1);
+	tmp = malloc(strlen(libpath) + 1);
 	if (!tmp)
 		return;
 	strcpy(tmp, libpath);
@@ -480,16 +459,8 @@ static void session_free(struct session *session)
 	free(session);
 }
 
-
-
-
-static const char config_default[]	= "/etc/bti";
-static const char config_user_default[]	= ".bti";
-
-
-
-
-
+static const char config_default[] = "/etc/bti";
+static const char config_user_default[] = ".bti";
 
 /* static void log_session(struct session *session, int retval) */
 /* { */
@@ -542,28 +513,26 @@ static const char config_user_default[]	= ".bti";
 /* 	fclose(log_file); */
 /* } */
 
-
-
 int main(int argc, char *argv[], char *envp[])
 {
-  //FIXME:user could choose only a website no all website.which means --host is available.
-  
+	//FIXME:user could choose only a website no all website.which means --host is available.
+
 	static const struct option options[] = {
-		{ "debug", 0, NULL, 'd' },
-		{ "verbose", 0, NULL, 'V' },
-		{ "action", 1, NULL, 'A' },
-		{ "logfile", 1, NULL, 'L' },
-		{ "shrink-urls", 0, NULL, 's' },
-		{ "help", 0, NULL, 'h' },
-		{ "bash", 0, NULL, 'b' },
-		{ "background", 0, NULL, 'B' },
-		{ "dry-run", 0, NULL, 'n' },
-		{ "page", 1, NULL, 'g' },
-		{ "version", 0, NULL, 'v' },
-		{ "config", 1, NULL, 'c' },
-		{ "replyto", 1, NULL, 'r' },
-		{ "retweet", 1, NULL, 'w' },
-		{ }
+		{"debug", 0, NULL, 'd'},
+		{"verbose", 0, NULL, 'V'},
+		{"action", 1, NULL, 'A'},
+		{"logfile", 1, NULL, 'L'},
+		{"shrink-urls", 0, NULL, 's'},
+		{"help", 0, NULL, 'h'},
+		{"bash", 0, NULL, 'b'},
+		{"background", 0, NULL, 'B'},
+		{"dry-run", 0, NULL, 'n'},
+		{"page", 1, NULL, 'g'},
+		{"version", 0, NULL, 'v'},
+		{"config", 1, NULL, 'c'},
+		{"replyto", 1, NULL, 'r'},
+		{"retweet", 1, NULL, 'w'},
+		{}
 	};
 	struct session *session;
 	pid_t child;
@@ -573,8 +542,8 @@ int main(int argc, char *argv[], char *envp[])
 	const char *config_file;
 	time_t t;
 	int page_nr;
-	char * tweet;
-	
+	char *tweet;
+
 	debug = 0;
 
 	session = session_alloc();
@@ -586,7 +555,7 @@ int main(int argc, char *argv[], char *envp[])
 	/* get the current time so that we can log it later */
 	time(&t);
 	session->time = strdup(ctime(&t));
-	session->time[strlen(session->time)-1] = 0x00;
+	session->time[strlen(session->time) - 1] = 0x00;
 
 	/*
 	 * Get the home directory so we can try to find a config file.
@@ -603,15 +572,16 @@ int main(int argc, char *argv[], char *envp[])
 	}
 
 	/* set up a default config file location (traditionally ~/.bti) */
-	session->configfile = zalloc(strlen(session->homedir) + strlen(config_file) + 7);
+	session->configfile =
+	    zalloc(strlen(session->homedir) + strlen(config_file) + 7);
 	sprintf(session->configfile, "%s/%s", session->homedir, config_file);
 
 	session_readline_init(session);
-	
-	struct account * account = parse_configfile(session);
+
+	struct account *account = parse_configfile(session);
 	if (account == NULL) {
-	  fprintf(stderr,"parse err, goto exit\n");
-	  exit(-1);
+		fprintf(stderr, "parse err, goto exit\n");
+		exit(-1);
 	}
 
 	while (1) {
@@ -711,7 +681,6 @@ int main(int argc, char *argv[], char *envp[])
 		}
 	}
 
-
 	/*
 	 * Show the version to make it easier to determine what
 	 * is going on here
@@ -719,17 +688,12 @@ int main(int argc, char *argv[], char *envp[])
 	if (debug)
 		display_version();
 
-
-
-
 	if (session->action == ACTION_UNKNOWN) {
 		fprintf(stderr, "Unknown action, valid actions are:\n"
 			"'update', 'friends', 'public', 'replies', 'group' or 'user'.\n");
 		goto exit;
 	}
 
-
-	
 	dbg("config file = %s\n", session->configfile);
 	dbg("action = %d\n", session->action);
 
@@ -737,56 +701,58 @@ int main(int argc, char *argv[], char *envp[])
 	 * with it's life as we try to connect and handle everything
 	 */
 	if (session->background) {
-	  child = fork();
-	  if (child) {
-	    dbg("child is %d\n", child);
-	    exit(0);
-	  }
+		child = fork();
+		if (child) {
+			dbg("child is %d\n", child);
+			exit(0);
+		}
 	}
-	switch(session->action) {
+	switch (session->action) {
 	case ACTION_PUBLIC:
-	  PUBLIC(account, session, retval);
-	  break;
+		PUBLIC(account, session, retval);
+		break;
 	case ACTION_UPDATE:
+		if (session->background || !session->interactive)
+			tweet = get_string_from_stdin();
+		else
+			tweet = session->readline("tweet: ");
+		if (!tweet || strlen(tweet) == 0) {
+			dbg("no tweet?\n");
+			return -1;
+		}
 
-	  if (session->background || !session->interactive)
-	    tweet = get_string_from_stdin();
-	  else
-	      tweet = session->readline("tweet: ");
-	  if (!tweet || strlen(tweet) == 0) {
-	    dbg("no tweet?\n");
-	    return -1;
-	  }
-	    
-	  if (session->shrink_urls)
-	    tweet = shrink_urls(tweet);
-	  session->tweet = zalloc(strlen(tweet) + 10);
-	  if (session->bash)
-	    sprintf(session->tweet, "%c %s",
-		    getuid() ? '$' : '#', tweet);
-	  else
-	    sprintf(session->tweet, "%s", tweet);
-	    if(tweet)
-	      free(tweet);
-	    dbg("tweet = %s\n", session->tweet);
-	    UPDATE(account, session, retval);
-	    break;
+		if (session->shrink_urls)
+			tweet = shrink_urls(tweet);
+		session->tweet = zalloc(strlen(tweet) + 10);
+		if (session->bash)
+			sprintf(session->tweet, "%c %s",
+				getuid()? '$' : '#', tweet);
+		else
+			sprintf(session->tweet, "%s", tweet);
+		if (tweet)
+			free(tweet);
+		dbg("tweet = %s\n", session->tweet);
+		UPDATE(account, session, retval);
+		break;
 	case ACTION_FRIENDS:
-	  FRIENDS(account ,session, retval);
-	  break;
+		FRIENDS(account, session, retval);
+		break;
+	case ACTION_REPLIES:
+		REPLIES(account, session, retval);
+		break;
 	default:
-	  retval = -1;
-	  break;
+		retval = -1;
+		break;
 	}
 
-	//	retval = send_request(session);
-	
+	//      retval = send_request(session);
+
 	if (retval && !session->background)
 		fprintf(stderr, "operation failed\n");
 
 	/* log_session(session, retval); */
 	DESTORY(account);
-exit:
+ exit:
 	session_readline_cleanup(session);
 	session_free(session);
 	return retval;;

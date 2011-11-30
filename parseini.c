@@ -1,4 +1,8 @@
 /* -*- mode: c; c-basic-offset: 4; tab-width: 4; indent-tabs-mode: t -*- */
+/*
+ * forked from Greg Kroah-Hartman's bti project
+ * see https://github.com/thesues/bti
+ */
 #include <iniparser.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,19 +22,19 @@ char *global_configs[] = {
 	"shrink_urls"
 };
 
-
-struct host_map{
+struct host_map {
 	enum HOST type;
-	char * name;
+	char *name;
 };
 
-struct host_map hosts[NUMOFHOSTS]={
+struct host_map hosts[NUMOFHOSTS] = {
 	{TWITTER, "twitter"},
 	{SINA, "sina"},
 	{DOUBAN, "douban"},
 };
 
-static struct account  * readConfig(enum HOST m_host, dictionary * ini, struct session * session);
+static struct account *readConfig(enum HOST m_host, dictionary * ini,
+				  struct session *session);
 
 struct account *parse_configfile(struct session *session)
 {
@@ -74,43 +78,45 @@ struct account *parse_configfile(struct session *session)
 		}
 	}
 
-	
-	if((account=readConfig(TWITTER, ini, session)) != NULL) {
+	if ((account = readConfig(TWITTER, ini, session)) != NULL) {
 		account->next = NULL;
-		if(head)
-			head->next= account;
+		if (head)
+			head->next = account;
 		else
-			head=account;
+			head = account;
 	}
-	
-	if((account = readConfig(SINA, ini, session)) != NULL) {
+
+	if ((account = readConfig(SINA, ini, session)) != NULL) {
 		account->next = NULL;
-		if(head)
-			head->next= account;
+		if (head)
+			head->next = account;
 		else
-			head=account;
+			head = account;
 	}
-	   
+
 	iniparser_freedict(ini);
 
 	return head;
 }
 
-struct account  * readConfig(enum HOST m_host, dictionary * ini, struct session * session)
+struct account *readConfig(enum HOST m_host, dictionary * ini,
+			   struct session *session)
 {
-	char *s1,*s2;
+	char *s1, *s2;
 	char consumer_key_name[30];
 	char consumer_secret_name[30];
 	char access_token_key_name[30];
 	char access_token_secret_name[30];
-	char  * host =  NULL;
-	struct account * account = NULL;
-	dbg("try to read %s config\n",hosts[m_host].name);
-	
-	sprintf(consumer_key_name,"%s:consumer_key",hosts[m_host].name);
-	sprintf(consumer_secret_name,"%s:consumer_secret",hosts[m_host].name);
-	sprintf(access_token_key_name,"%s:access_token_key",hosts[m_host].name);
-	sprintf(access_token_secret_name,"%s:access_token_secret",hosts[m_host].name);
+	char *host = NULL;
+	struct account *account = NULL;
+	dbg("try to read %s config\n", hosts[m_host].name);
+
+	sprintf(consumer_key_name, "%s:consumer_key", hosts[m_host].name);
+	sprintf(consumer_secret_name, "%s:consumer_secret", hosts[m_host].name);
+	sprintf(access_token_key_name, "%s:access_token_key",
+		hosts[m_host].name);
+	sprintf(access_token_secret_name, "%s:access_token_secret",
+		hosts[m_host].name);
 	free(host);
 
 	s1 = iniparser_getstring(ini, consumer_key_name, NULL);
@@ -119,17 +125,17 @@ struct account  * readConfig(enum HOST m_host, dictionary * ini, struct session 
 	if (s1 != NULL && s2 != NULL) {
 		switch (m_host) {
 		case TWITTER:
-			account = twitter_init(s1,s2);
+			account = twitter_init(s1, s2);
 			break;
 		case SINA:
-			account = sina_init(s1,s2);
+			account = sina_init(s1, s2);
 			break;
 		case DOUBAN:
 			account = NULL;
-		break;
+			break;
 		}
 
-		struct oauth_data * data = (struct oauth_data *)account->data;
+		struct oauth_data *data = (struct oauth_data *)account->data;
 		/*check for token key */
 		s1 = iniparser_getstring(ini, access_token_key_name, NULL);
 		s2 = iniparser_getstring(ini, access_token_secret_name, NULL);
@@ -140,24 +146,26 @@ struct account  * readConfig(enum HOST m_host, dictionary * ini, struct session 
 			data->access_token_secret = strdup(s2);
 		} else {
 			dbg("no access_token_key now!");
-			if(oauth_access_token(account, session)==1)
-			{
-				fprintf(stderr,"%s access token failed!",hosts[m_host]);
+			if (oauth_access_token(account, session) == 1) {
+				fprintf(stderr, "%s access token failed!",
+					hosts[m_host]);
 				account->opts->destory(account);
 				return NULL;
-			}
-			else
-			{
-				dbg("token:%s,\n secret:%s\n",data->access_token_key, data->access_token_secret);
-				iniparser_setstr(ini, access_token_key_name, data->access_token_key);
-				iniparser_setstr(ini, access_token_secret_name, data->access_token_secret);
-				FILE * fp=fopen(session->configfile,"w");
+			} else {
+				dbg("token:%s,\n secret:%s\n",
+				    data->access_token_key,
+				    data->access_token_secret);
+				iniparser_setstr(ini, access_token_key_name,
+						 data->access_token_key);
+				iniparser_setstr(ini, access_token_secret_name,
+						 data->access_token_secret);
+				FILE *fp = fopen(session->configfile, "w");
 				iniparser_dump_ini(ini, fp);
 				fclose(fp);
 			}
-			
+
 		}
 	}
-	
+
 	return account;
 }
