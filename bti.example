@@ -1,19 +1,8 @@
-# comments are allowed in the bti config file
-# rename this to ~/.bti so that you do not need
-# to constantly enter your account name and/or
-# password on the command line every time you send
-# a message.
-account=twitmaster
-password=icanhascheezburger
-host=identica
-# Example of a custom laconica installation
-#host=http://army.twit.tv/api/statuses
-logfile=.bti.log
-#action=update
-#user=gregkh
-#proxy=http://localhost:8080
-#shrink-urls=yes
-# Example of using bit.ly in bti-shrink-urls
-#shrink_host=bit.ly
-#shrink_bitly_login=bitlyuser
-#shrink_bitly_key=R_deadbeef
+
+[twitter]
+consumer_key                   = cZy8DdioswAfu3LJYg6E2w
+consumer_secret                = fnIGGU0T12mMWKjmThUdSeKN32NLWfmnwapwubVQ
+
+[sina]
+consumer_key                   = 3357007100
+consumer_secret                = c6528d21e492d4cb4547b99247354448
