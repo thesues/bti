@@ -9,10 +9,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+int twitter_public( struct account * account ,struct session * session)
+{
+	struct oauth_data *data = (struct oauth_data *)account->data;
+	oauth_public(account, session, NULL);
+}
+int twitter_update( struct account * account ,struct session * session)
+{
+	struct oauth_data *data = (struct oauth_data *)account->data;
+	oauth_update(account, session, NULL);
+}
+int twitter_friends( struct account * account ,struct session * session)
+{
+	struct oauth_data *data = (struct oauth_data *)account->data;
+	oauth_friends(account, session, NULL);
+}
+
 static struct ops_t twitter_ops = {
-	.action_public = oauth_public,
-	.action_update = oauth_update,
-	.action_friends = oauth_friends,
+	.action_public = twitter_public,
+	.action_update = twitter_update,
+	.action_friends = twitter_friends,
 	.action_replies = oauth_replies,
 	.destory = oauth_destory
 };

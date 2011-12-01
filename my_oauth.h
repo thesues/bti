@@ -31,9 +31,9 @@ struct oauth_data {
 };
 
 int oauth_destory(struct account *);
-int oauth_public(struct account *, struct session *);
-int oauth_update(struct account *, struct session *);
-int oauth_friends(struct account *, struct session *);
+int oauth_public(struct account *, struct session *, ...);
+int oauth_update(struct account *, struct session *, ...);
+int oauth_friends(struct account *, struct session *, ...);
 int oauth_replies(struct account *, struct session *);
 /*TODO: other methods is going*/
 

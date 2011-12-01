@@ -14,6 +14,7 @@
 #include <oauth.h>
 #include <termios.h>
 #include <pcre.h>
+#include <stdarg.h>
 
 static int parse_osp_reply(const char *reply, char **token, char **secret)
 {
@@ -252,15 +253,36 @@ void parse_timeline(char *document, struct session *session)
 	return;
 }
 
-int oauth_public(struct account *account, struct session *session)
+static int addExtraParameter(char * format, va_list argp)
+{
+	char *p,*q;
+	int offset=0;
+	while((p=va_arg(argp, char*)) != NULL){
+		q=va_arg(argp, char*);
+		if(!q)
+		  return -1;
+		sprintf(format+offset,"&%s=%s",p,q);
+		offset=strlen(p) + strlen(q) + 2;
+	}
+	return 0;
+}
+
+int oauth_public(struct account *account, struct session *session, ...)
 {
 	struct oauth_data *data = (struct oauth_data *)account->data;
 	char endpoint[500];
 	char *req_url = NULL;
 	char *reply = NULL;
-	sprintf(endpoint, "%s%s?source=%s", data->host_url, data->public_uri,
-		data->consumer_key);
-
+	sprintf(endpoint, "%s%s", data->host_url, data->public_uri);
+	
+	va_list argp;
+	va_start(argp, session);
+    if(addExtraParameter(endpoint+strlen(endpoint),argp)==-1){
+		fprintf(stderr,"public failed");
+		return -1;
+	}
+	va_end(argp);
+	
 	if (!session->dry_run) {
 		req_url = oauth_sign_url2(endpoint, NULL, OA_HMAC,
 					  NULL, data->consumer_key,
@@ -284,7 +306,7 @@ int oauth_public(struct account *account, struct session *session)
 	return 0;
 }
 
-int oauth_update(struct account *account, struct session *session)
+int oauth_update(struct account *account, struct session *session, ...)
 {
 	struct oauth_data *data = (struct oauth_data *)account->data;
 	char endpoint[500];
@@ -292,8 +314,17 @@ int oauth_update(struct account *account, struct session *session)
 	char *reply = NULL;
 	char *postarg = NULL;
 	char *escaped_tweet = oauth_url_escape(session->tweet);
-	sprintf(endpoint, "%s%s?source=%s&status=%s", data->host_url,
-		data->update_uri, data->consumer_key, escaped_tweet);
+	sprintf(endpoint, "%s%s?status=%s", data->host_url,
+		data->update_uri, escaped_tweet);
+
+	va_list argp;
+	va_start(argp, session);
+    if(addExtraParameter(endpoint+strlen(endpoint),argp)==-1){
+		fprintf(stderr,"public failed");
+		return -1;
+	}
+	va_end(argp);
+
 	if (!session->dry_run) {
 		req_url = oauth_sign_url2(endpoint, &postarg, OA_HMAC, NULL,
 					  data->consumer_key,
@@ -324,14 +355,21 @@ int oauth_update(struct account *account, struct session *session)
 	return 0;
 }
 
-int oauth_friends(struct account *account, struct session *session)
+int oauth_friends(struct account *account, struct session *session, ...)
 {
 	struct oauth_data *data = (struct oauth_data *)account->data;
 	char endpoint[500];
 	char *req_url = NULL;
 	char *reply = NULL;
-	sprintf(endpoint, "%s%s?source=%s", data->host_url, data->friends_uri,
-		data->consumer_key);
+	sprintf(endpoint, "%s%s", data->host_url, data->friends_uri);
+	
+	va_list argp;
+	va_start(argp, session);
+    if(addExtraParameter(endpoint+strlen(endpoint),argp)==-1){
+		fprintf(stderr,"public failed");
+		return -1;
+	}
+	va_end(argp);
 
 	if (!session->dry_run) {
 		req_url = oauth_sign_url2(endpoint, NULL, OA_HMAC,

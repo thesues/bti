@@ -11,13 +11,33 @@
 #include <stdlib.h>
 #include <oauth.h>
 
+int sina_public(struct account * account, struct session * session)
+{
+	struct oauth_data *data = (struct oauth_data *)account->data;
+	oauth_public(account,session,"source",data->consumer_key,NULL);
+}
+
+int sina_update(struct account * account, struct session * session)
+{
+	struct oauth_data *data = (struct oauth_data *)account->data;
+	oauth_update(account,session,"source",data->consumer_key,NULL);
+}
+
+int sina_friends(struct account * account, struct session * session)
+{
+	struct oauth_data *data = (struct oauth_data *)account->data;
+	oauth_friends(account,session,"source",data->consumer_key,NULL);
+}
+
+
 static struct ops_t sina_ops = {
-	.action_public = oauth_public,
-	.action_update = oauth_update,
-	.action_friends = oauth_friends,
+	.action_public = sina_public,
+	.action_update = sina_update,
+	.action_friends = sina_friends,
 	.action_replies = oauth_replies,
 	.destory = oauth_destory
 };
+
 
 struct account *sina_init(const char *consumer_key, const char *consumer_secret)
 {
