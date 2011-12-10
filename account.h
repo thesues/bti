@@ -57,9 +57,9 @@ struct ops_t {
 	} while(0)
 
 #define REPLIES(acc, session, ret)							\
-	do{														\
+	do {													\
 		struct account *p = acc;							\
-		while (p! = NULL){									\
+		while (p != NULL){									\
 			if (p->opts->action_replies)					\
 				ret = p->opts->action_replies(p, session);	\
 			p = p->next;									\
@@ -75,6 +75,6 @@ struct ops_t {
 			p->opts->destory(p);				\
 			p=tmp;								\
 		}										\
-	} while(0);
+	} while(0)
 
 #endif
