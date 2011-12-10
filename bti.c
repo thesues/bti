@@ -505,7 +505,7 @@ static const char config_user_default[] = ".bti";
 /* 	case ACTION_PUBLIC: */
 /* 		fprintf(log_file, "%s: host=%s retrieving public timeline\n", */
 /* 			session->time, session->hostname); */
-/* 		break; */
+/*		break; */
 /* 	default: */
 /* 		break; */
 /* 	} */
