@@ -9,20 +9,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int twitter_public( struct account * account ,struct session * session)
+static int twitter_public( struct account * account ,struct session * session)
 {
 	struct oauth_data *data = (struct oauth_data *)account->data;
-	oauth_public(account, session, NULL);
+	return oauth_public(account, session, NULL);
 }
-int twitter_update( struct account * account ,struct session * session)
+static int twitter_update( struct account * account ,struct session * session)
 {
 	struct oauth_data *data = (struct oauth_data *)account->data;
-	oauth_update(account, session, NULL);
+	return oauth_update(account, session, NULL);
 }
-int twitter_friends( struct account * account ,struct session * session)
+static int twitter_friends( struct account * account ,struct session * session)
 {
 	struct oauth_data *data = (struct oauth_data *)account->data;
-	oauth_friends(account, session, NULL);
+	return oauth_friends(account, session, NULL);
 }
 
 static struct ops_t twitter_ops = {

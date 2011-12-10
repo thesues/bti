@@ -28,7 +28,6 @@
 #include "bti.h"
 #include "account.h"
 
-#define VERSION "test"
 
 struct account *parse_configfile(struct session *session);
 /**

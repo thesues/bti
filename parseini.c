@@ -33,9 +33,11 @@ struct host_map hosts[NUMOFHOSTS] = {
 	{DOUBAN, "douban"},
 };
 
+
 extern struct account * twitter_init(const char *, const char *);
 extern struct account * sina_init(const char*, const char *);
-	
+extern int oauth_access_token(struct account *ac, struct session *session);
+
 static struct account *readConfig(enum HOST m_host, dictionary * ini,
 				  struct session *session);
 
@@ -44,7 +46,7 @@ struct account *parse_configfile(struct session *session)
 
 	dictionary *ini;
 	int item;
-	char *s;
+	char *s=NULL;
 	int bool;
 	if ((ini = iniparser_load(session->configfile)) == NULL) {
 		fprintf(stderr, "cannot parse file\n");

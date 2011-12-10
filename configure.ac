@@ -18,9 +18,9 @@ PKG_CHECK_MODULES(LIBOAUTH, oauth)
 PKG_CHECK_MODULES(LIBPCRE, libpcre)
 PKG_CHECK_MODULES([LIBCURL], [libcurl])
 PKG_CHECK_MODULES([XML], [libxml-2.0])
-PKG_CHECK_MODULES([INIPARSER], [libiniparser])
 
 AC_SEARCH_LIBS([dlopen], [dl])
+
 
 AC_CONFIG_FILES([Makefile])
 
@@ -38,7 +38,8 @@ echo "
 	compiler:               ${CC}
 	cflags:                 ${CFLAGS}
 	ldflags:                ${LDFLAGS}
-
 	xsltproc:               ${XSLTPROC}
+	libpcre:                ${LIBPCRE_CFLAGS} ${LIBPCRE_LIBS}
+	liboauth:		${LIBOAUTH_CFLAGS} ${LIBOAUTH_LIBS}
 "
 
