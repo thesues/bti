@@ -309,7 +309,7 @@ int oauth_public(struct account *account, struct session *session, ...)
 int oauth_update(struct account *account, struct session *session, ...)
 {
 	struct oauth_data *data = (struct oauth_data *)account->data;
-	char endpoint[500];
+	char endpoint[1024];
 	char *req_url = NULL;
 	char *reply = NULL;
 	char *postarg = NULL;

@@ -4,7 +4,7 @@ bti
 *.swp
 *.gz
 *.bz2
-Makefile
+./Makefile
 Makefile.in
 aclocal.m4
 autom4te.cache
