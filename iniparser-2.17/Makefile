@@ -61,3 +61,5 @@ docs:
 	
 check:
 	@(cd test ; $(MAKE))
+install:libiniparser.a
+
