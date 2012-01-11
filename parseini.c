@@ -25,9 +25,7 @@ char *global_configs[] = {
 struct host_map {
 	enum HOST type;
 	char *name;
-};
-
-struct host_map hosts[NUMOFHOSTS] = {
+} hosts[NUMOFHOSTS] = {
 	{TWITTER, "twitter"},
 	{SINA, "sina"},
 	{DOUBAN, "douban"},

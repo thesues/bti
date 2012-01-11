@@ -25,3 +25,4 @@ INSTALL
 check-news.in
 tags
 TAGS
+*.a
